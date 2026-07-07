@@ -1,3 +1,6 @@
+#ifndef GUSTAVIANWIFI_H
+#define GUSTAVIANWIFI_H
+
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -8,18 +11,10 @@
 #include "httpServer.h"
 #include "sdkconfig.h"
 #include "driver/gpio.h"
-#include "gustavianWifi.h"
+
+static void IRAM_ATTR isr_botao(void *arg);
+void task_intr_wifi(void *parameters);
+void gustavianWifiStart();
 
 
-
-
-
-
-
-
-
-void app_main(void)
-{
-    gustavianWifiStart();
-    
-}
+#endif
