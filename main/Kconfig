@@ -1,0 +1,10 @@
+menu "Configuracao Gwifi"
+
+    config GPIO_INTR
+        int "GPIO do botao de provisionamento"
+        default 0
+        range 0 39
+        help
+            Pino GPIO usado para forçar o modo de provisionamento manualmente
+        
+endmenu
