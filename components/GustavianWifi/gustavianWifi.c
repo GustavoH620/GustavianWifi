@@ -41,7 +41,7 @@ void task_intr_wifi(void *parameters){
 }
 
 void gustavianWifiStart(){
-    
+
     gpio_config_t config_botao = {
         .pin_bit_mask = (1ULL << CONFIG_GPIO_INTR),
         .mode = GPIO_MODE_INPUT,
@@ -76,3 +76,4 @@ void gustavianWifiStart(){
     );
 
 }
+

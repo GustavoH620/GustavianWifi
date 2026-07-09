@@ -11,13 +11,6 @@
 #include "gustavianWifi.h"
 
 
-
-
-
-
-
-
-
 void app_main(void)
 {
     gustavianWifiStart();

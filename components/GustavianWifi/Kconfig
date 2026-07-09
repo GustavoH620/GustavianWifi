@@ -6,5 +6,15 @@ menu "Configuracao Gwifi"
         range 0 39
         help
             Pino GPIO usado para forçar o modo de provisionamento manualmente
+    
+    config BOOL_RECX
+        int "Bool para reconexão infinita ou não"
+        default 0
+        help
+            Bool para determinar se as tentativas de reconexão são infinitas, independente do número de tentativas
+    
+    config NT_TENTATIVAS
+        int "Variável que segura o número de tentativas de reconexão"
+        default 15
         
 endmenu
