@@ -42,7 +42,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         if (!provisionamento){
             ESP_LOGW(TAG, "Conexão falhou!");
             contadorTentativas++;
-            if (contadorTentativas < 16 || !CONFIG_BOOL_RECX){
+            if (contadorTentativas < CONFIG_NT_TENTATIVAS || !CONFIG_BOOL_RECX){
                 if (contadorTentativas > 1) ESP_LOGW(TAG, "Conexão falhou novamente...\n Tentativas: %d", contadorTentativas);
                 ESP_ERROR_CHECK(esp_wifi_connect());
 
