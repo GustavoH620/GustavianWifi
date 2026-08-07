@@ -59,12 +59,23 @@ void gustavianWifiStart(){
     configurar_wifi();
 
     vTaskDelay(pdMS_TO_TICKS(1000));
+    int ultima_rede = checar_ultima_rede();
+    if (ultima_rede){
+        ESP_LOGI("MAIN", "Última rede não encontrada, iniciando provisionamento...");
+        provisionamentoWifiHTTP();
 
-    conectar_ultima_rede();
+    } else {
+        conectar_ultima_rede();
+    }
+    
 
     vTaskDelay(pdMS_TO_TICKS(5000));
 
-    if (conexao) ESP_LOGI("MAIN", "Rede conectada!, continuando rotina...");
+    if (conexao) {
+        ESP_LOGI("MAIN", "Rede conectada!, continuando rotina...");
+    } else {
+        ESP_LOGI("MAIN", "Rede não conectada...");
+    }
 
     xTaskCreate(
         task_intr_wifi,
