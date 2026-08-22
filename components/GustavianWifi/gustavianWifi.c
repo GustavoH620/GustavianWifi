@@ -88,3 +88,11 @@ void gustavianWifiStart(){
 
 }
 
+bool checar_conexao(){
+    if (conexao){
+        return true;
+    } else {
+        return false;
+    }
+}
+
