@@ -27,14 +27,14 @@ void iniciar_nvs(){
 int checar_ultima_rede(){
     ESP_ERROR_CHECK(nvs_open(particao_wifi, NVS_READWRITE, &handle_nvs));
     nvs_iterator_t iterador = NULL;
-    esp_err_t erro = nvs_entry_find("nvs", particao_wifi, NVS_TYPE_ANY, &iterador);
+    esp_err_t erro = nvs_entry_find("nvs", particao_wifi, NVS_TYPE_BLOB, &iterador);
 
     while (erro == ESP_OK){
         nvs_entry_info_t info;
         nvs_entry_info(iterador, &info);
         credenciais_status_wifi credenciais;
-        size_t tamanho_credenciais;
-        esp_err_t erro_blob = nvs_get_blob(handle_nvs, info.key, &credenciais, &tamanho_credenciais);
+        size_t tamanho_credenciais = sizeof(credenciais);
+        esp_err_t erro_blob = nvs_get_blob(handle_nvs, "rede_salva", &credenciais, &tamanho_credenciais);
         if (erro_blob == ESP_OK){
             
             ESP_LOGI("NVS", "Namespace: %s\nChave: %s\nSSID: %s, Senha: %s, Ultima acessada?: %d", 
