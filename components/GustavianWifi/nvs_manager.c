@@ -77,6 +77,7 @@ int salvar_rede(char* ssid, char* senha){
     credenciais_novas.ultima_acessada = 1;
     size_t tamanho_credenciais = sizeof(credenciais_novas);
     ESP_ERROR_CHECK(nvs_set_blob(handle_nvs, "rede_salva", &credenciais_novas, tamanho_credenciais));
+    nvs_commit(handle_nvs);
     ESP_LOGI("NVS", "Credenciais de última rede atualizadas");
     nvs_close(handle_nvs);
     return 0;
