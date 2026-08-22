@@ -15,6 +15,7 @@
 static void IRAM_ATTR isr_botao(void *arg);
 void task_intr_wifi(void *parameters);
 void gustavianWifiStart();
+bool checar_conexao();
 
 
 #endif
