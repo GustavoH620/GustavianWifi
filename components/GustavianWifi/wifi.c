@@ -107,7 +107,7 @@ void provisionamentoWifiHTTP()
 
         //Liga o rádio Wi-fi
         if (!conexao) ESP_ERROR_CHECK(esp_wifi_start());
-        vTaskDelay(pdMS_TO_TICKS(500));
+        
         ESP_LOGI("WIFI", "Rádio wifi ligado");
         //Agora que a rede está no ar (IP 192.168.4.1), podemos iniciar o servior
         servidor = inicializar_servidor_web();

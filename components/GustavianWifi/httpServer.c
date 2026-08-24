@@ -48,7 +48,6 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     //Envia uma resposta visual para o utilizador não ficar com o ecrã a carregar
     httpd_resp_send(req, "recebido! o ESP32 vai tentar ligar-se...", HTTPD_RESP_USE_STRLEN);
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
 
     char ssid[64] = {0};
     char senha[50] = {0};
@@ -69,15 +68,7 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     ESP_LOGI("WIFI", "Tentando se conectar...");
     provisionamento = false;
     conectar_rede(ssid, senha);
-    vTaskDelay(pdMS_TO_TICKS(10000));
-    if (conexao){
-        httpd_resp_send(req, "Conectado a rede!",HTTPD_RESP_USE_STRLEN);
-        salvar_rede(ssid, senha);
-       
-        
-    } else {
-        httpd_resp_send(req, "Informações incorretas", HTTPD_RESP_USE_STRLEN);
-    }
+    salvar_rede(ssid, senha);
 
     return ESP_OK;
 
