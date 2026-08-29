@@ -12,61 +12,17 @@
 #include "nvs.h"
 #include "esp_netif.h"
 #include "httpServer.h"
+#include "eventos.h"
 
-typedef struct {
-    char ssid[64];
-    char senha[32];
-    bool ultima_acessada;
-} credenciais_status_wifi;
-
+extern EventGroupHandle_t eventos_status;
 extern httpd_handle_t servidor;
 extern credenciais_status_wifi ultima_rede;
-extern bool conexao;
+
+
 volatile bool wifi_iniciado = false;
 volatile bool provisionamento = false;
 const char* TAG = "WIFI";
 int8_t contadorTentativas = 0;
-static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
-{
-    //Evento 1: O wi-fi acabou de ser ligado (Iniciado)
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START){
-        ESP_LOGI(TAG, "Wifi iniciado!");
-        wifi_iniciado = true;
-        
-
-        //esp_wifi_connect(); //tenta conectar
-    }
-    //Evento 2: A conexão falhou (senha errada, roteador longe, etc)
-    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED){
-        conexao = false;
-        if (!provisionamento){
-            ESP_LOGW(TAG, "Conexão falhou!");
-            contadorTentativas++;
-            if (contadorTentativas < CONFIG_NT_TENTATIVAS || !CONFIG_BOOL_RECX){
-                if (contadorTentativas > 1) ESP_LOGW(TAG, "Conexão falhou novamente...\n Tentativas: %d", contadorTentativas);
-                ESP_ERROR_CHECK(esp_wifi_connect());
-
-            } else {
-                ESP_LOGW(TAG, "Tentativa de reconexão falhou, inicianddo provisionamento...");
-                provisionamentoWifiHTTP();
-            }
-        } else {
-            ESP_LOGI(TAG, "Provisionamento intencional");
-        }
-    }
-    //Evento 3: conexão bem sucedida, endereço IP recebido
-    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP){
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "Conexão realizada com sucesso! IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        conexao = true;
-        contadorTentativas = 0;
-        httpd_stop(servidor);
-        esp_wifi_set_mode(WIFI_MODE_STA);
-
-    }
-
-
-}
 
 void configurar_wifi(){
     ESP_ERROR_CHECK(esp_netif_init());
@@ -80,10 +36,10 @@ void configurar_wifi(){
     ESP_ERROR_CHECK(esp_wifi_start());
 
 }
-void provisionamentoWifiHTTP()
+void task_provisionamentoWifiHTTP(void *parameters)
 {
-    if (!provisionamento){
-        provisionamento = true;
+    EventBits_t bits = xEventGroupGetBits(eventos_status);
+    if (bits & PROVISIONING_STATUS){
         ESP_LOGI("WIFI", "Aqui é o método de provisionamento!");
         esp_wifi_disconnect();
 
@@ -93,7 +49,7 @@ void provisionamentoWifiHTTP()
                 .ssid="Gustavian ESP",
                 .ssid_len = strlen("Gustavian ESP"),
                 .channel = 1,
-                .password = "", //Deixa vazio para rede aberta
+                .password = "123", //Deixa vazio para rede aberta
                 .max_connection = 4,
                 .authmode = WIFI_AUTH_OPEN
             },
@@ -106,22 +62,25 @@ void provisionamentoWifiHTTP()
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
 
         //Liga o rádio Wi-fi
-        if (!conexao) ESP_ERROR_CHECK(esp_wifi_start());
-        
+
+        if ((bits & WIFI_STATUS) == 0) ESP_ERROR_CHECK(esp_wifi_start());
+        vTaskDelay(pdMS_TO_TICKS(500));
         ESP_LOGI("WIFI", "Rádio wifi ligado");
-        //Agora que a rede está no ar (IP 192.168.4.1), podemos iniciar o servior
+        //Agora que a rede está no ar (IP 192.168.4.1), podemos iniciar o servidor
         servidor = inicializar_servidor_web();
         
     } else {
         ESP_LOGI("WIFI", "Provisionamento já iniciado");
     }
+    vTaskDelete(NULL);
 
 }
 
 int conectar_ultima_rede(){
+    EventBits_t bits = xEventGroupGetBits(eventos_status);
     int check_ultima_rede = checar_ultima_rede();
     if (check_ultima_rede == 0){
-        while (wifi_iniciado == false){
+        while ((bits & WIFI_STATUS) == 0){
             vTaskDelay(pdMS_TO_TICKS(50));
         }
         wifi_config_t wifi_config = {0};
@@ -152,3 +111,48 @@ void conectar_rede(char* ssid, char* senha){
     ESP_LOGI("WIFI", "Tentando se conectar a rede...");
 
 }
+
+static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+    EventBits_t bits = xEventGroupGetBits(eventos_status);
+    //Evento 1: O wi-fi acabou de ser ligado (Iniciado)
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START){
+        ESP_LOGI(TAG, "Wifi iniciado! Mudando event group...");
+        xEventGroupSetBits(eventos_status, WIFI_STATUS);
+
+    }
+    //Evento 2: A conexão falhou (senha errada, roteador longe, etc)
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED){
+        xEventGroupClearBits(eventos_status, WIFI_STATUS | CONEXAO_STATUS);
+        if ((bits & PROVISIONING_STATUS) == 0){
+            ESP_LOGW(TAG, "Conexão falhou!");
+            contadorTentativas++;
+            if (contadorTentativas < CONFIG_NT_TENTATIVAS || !CONFIG_BOOL_RECX){
+                if (contadorTentativas > 1) ESP_LOGW(TAG, "Conexão falhou novamente...\n Tentativas: %d", contadorTentativas);
+                ESP_ERROR_CHECK(esp_wifi_connect());
+                vTaskDelay(pdMS_TO_TICKS(2000));
+
+            } else {
+                ESP_LOGW(TAG, "Tentativa de reconexão falhou, iniciando provisionamento...");
+                xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+                xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
+            }
+        } else {
+            ESP_LOGI(TAG, "Provisionamento intencional");
+        }
+    }
+    //Evento 3: conexão bem sucedida, endereço IP recebido
+    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP){
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "Conexão realizada com sucesso! IP: " IPSTR, IP2STR(&event->ip_info.ip));
+        xEventGroupSetBits(eventos_status, CONEXAO_STATUS);
+        contadorTentativas = 0;
+        httpd_stop(servidor);
+        esp_wifi_set_mode(WIFI_MODE_STA);
+        xEventGroupClearBits(eventos_status, PROVISIONING_STATUS);
+
+    }
+
+
+}
+

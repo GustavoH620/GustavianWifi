@@ -2,15 +2,17 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "nvs_manager.h"
 #include "wifi.h"
+#include "eventos.h"
 #include "httpServer.h"
 #include "sdkconfig.h"
 #include "driver/gpio.h"
 
 
-
+extern EventGroupHandle_t eventos_status;
 //FILA E INTERRUPÇÃO
 
 QueueHandle_t fila_botao_isr;
@@ -35,8 +37,18 @@ void task_intr_wifi(void *parameters){
         if ((tempoAtual - tempoAnterior) > pdMS_TO_TICKS(1000) && !estado_btn){
             ESP_LOGI("Task INTR", "Interrupção recebida, inicianddo provisionamento...");
             tempoAnterior = tempoAtual;
-            provisionamentoWifiHTTP();
+            xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+            xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
         }
+    }
+}
+
+bool checar_conexao(){
+    EventBits_t bits = xEventGroupGetBits(eventos_status);
+    if (bits & CONEXAO_STATUS){
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -54,24 +66,36 @@ void gustavianWifiStart(){
     gpio_install_isr_service(0);
     gpio_isr_handler_add(CONFIG_GPIO_INTR, isr_botao, (void*) CONFIG_GPIO_INTR);
 
-
+    criar_eventGroup();
+    ESP_LOGI("MAIN", "Event Group criado");
     iniciar_nvs();
+    ESP_LOGI("MAIN", "NVS iniciado");
     configurar_wifi();
 
+    vTaskDelay(pdMS_TO_TICKS(1000));
     int ultima_rede = checar_ultima_rede();
     if (ultima_rede){
         ESP_LOGI("MAIN", "Última rede não encontrada, iniciando provisionamento...");
-        provisionamentoWifiHTTP();
+        xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+        xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
 
     } else {
         conectar_ultima_rede();
     }
     
 
+    
+
+    if (checar_conexao()) {
+        ESP_LOGI("MAIN", "Rede conectada!, continuando rotina...");
+    } else {
+        ESP_LOGI("MAIN", "Rede não conectada...");
+    }
+
     xTaskCreate(
         task_intr_wifi,
         "Task INTR",
-        4096,
+        2048,
         NULL,
         2,
         NULL
@@ -79,11 +103,5 @@ void gustavianWifiStart(){
 
 }
 
-bool checar_conexao(){
-    if (conexao){
-        return true;
-    } else {
-        return false;
-    }
-}
+
 

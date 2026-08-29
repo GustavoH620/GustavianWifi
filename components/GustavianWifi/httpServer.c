@@ -3,15 +3,14 @@
 #include "esp_log.h"
 #include "nvs_manager.h"
 #include "wifi.h"
+#include "eventos.h"
+
 
 volatile httpd_handle_t servidor;
+extern EventGroupHandle_t eventos_status;
 extern bool provisionamento;
 
-typedef struct {
-    char ssid[64];
-    char senha[32];
-    bool ultima_acessada;
-} credenciais_status_wifi;
+
 
 extern bool conexao;
 //1. A página HML (String constante)
@@ -41,7 +40,7 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     }
     buffer[ret] = '\0'; //Finaliza a string em C
 
-    ESP_LOGI("HTTP", "Texto cru recebido co formulário: %s", buffer);
+    ESP_LOGI("HTTP", "Texto cru recebido do formulário: %s", buffer);
     //Nota: O navegador enviará algo como "ssid=MeuWifi&senha=MinhaSenha"
     //Teremos de separar (fazer o parse) desta string depois.
 
@@ -68,7 +67,14 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     ESP_LOGI("WIFI", "Tentando se conectar...");
     provisionamento = false;
     conectar_rede(ssid, senha);
-    salvar_rede(ssid, senha);
+    xEventGroupWaitBits(eventos_status, CONEXAO_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(15000));
+    EventBits_t bits = xEventGroupGetBits(eventos_status);
+    if (bits & CONEXAO_STATUS){
+        httpd_resp_send(req, "Conectado a rede!",HTTPD_RESP_USE_STRLEN);
+        salvar_rede(ssid, senha);
+    } else {
+        httpd_resp_send(req, "Informações incorretas", HTTPD_RESP_USE_STRLEN);
+    }
 
     return ESP_OK;
 
@@ -97,7 +103,8 @@ httpd_handle_t inicializar_servidor_web(void){
 
         ESP_LOGI("HTTP", "Servidor Web iniciado com sucesso");
     } else {
-        provisionamentoWifiHTTP();
+        xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+        xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
     }
     
     return servidor;

@@ -1,15 +1,7 @@
-#include <stdio.h>
-#include "string.h"
-#include "nvs.h"
-#include "nvs_flash.h"
-#include "esp_log.h"
+#include "nvs_manager.h"
 
 
-typedef struct {
-    char ssid[64];
-    char senha[32];
-    bool ultima_acessada;
-} credenciais_status_wifi;
+
 
 const char* particao_wifi = "part_wifi";
 char buffer[100];
