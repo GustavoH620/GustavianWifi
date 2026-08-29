@@ -18,8 +18,8 @@ const char* pagina_html =
     "<!DOCYPE html><html><body>"
     "<h2>Configurar Wi-Fi</h2>"
     "<form action=\"/salvar\" method=\"POST\">"
-    "SSID: <input type=\"text\" name=\"ssid\"><br><br>"
-    "Senha: <input type=\"password\" name=\"senha\"><br><br>"
+    "SSID: <input type=\"text\" name=\"ssid\"maxlenght=64\"><br><br>"
+    "Senha: <input type=\"password\" name=\"senha\"maxlenght=32\"><br><br>"
     "<input type=\"submit\" value=\"Conectar\">"
     "</form></body></html>";
 
@@ -49,7 +49,7 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
 
 
     char ssid[64] = {0};
-    char senha[50] = {0};
+    char senha[32] = {0};
     int leituras = 0;
     
     leituras = sscanf(buffer, "ssid=%50[^&]&senha=%50[^\r\n]", ssid, senha);
@@ -103,8 +103,13 @@ httpd_handle_t inicializar_servidor_web(void){
 
         ESP_LOGI("HTTP", "Servidor Web iniciado com sucesso");
     } else {
-        xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
-        xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
+        EventBits_t bits = xEventGroupGetBits(eventos_status);
+        if (bits & PROVISIONING_STATUS) {
+            ESP_LOGW("PROVISIONAMENTO", "Erro: provisionamento já iniciado");
+        } else {
+            xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+            xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
+        }
     }
     
     return servidor;

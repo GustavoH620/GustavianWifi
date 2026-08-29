@@ -29,8 +29,8 @@ int checar_ultima_rede(){
         esp_err_t erro_blob = nvs_get_blob(handle_nvs, "rede_salva", &credenciais, &tamanho_credenciais);
         if (erro_blob == ESP_OK){
             
-            ESP_LOGI("NVS", "Namespace: %s\nChave: %s\nSSID: %s, Senha: %s, Ultima acessada?: %d", 
-                    info.namespace_name, info.key, credenciais.ssid, credenciais.senha, credenciais.ultima_acessada);
+           // ESP_LOGI("NVS", "Namespace: %s\nChave: %s\nSSID: %s, Senha: %s, Ultima acessada?: %d", 
+           //         info.namespace_name, info.key, credenciais.ssid, credenciais.senha, credenciais.ultima_acessada);
             if (credenciais.ultima_acessada){
                 ESP_LOGI("NVS", "Enviando credenciais encontradas para struct");
                 ultima_rede = credenciais;

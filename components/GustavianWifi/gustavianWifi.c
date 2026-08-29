@@ -37,13 +37,19 @@ void task_intr_wifi(void *parameters){
         if ((tempoAtual - tempoAnterior) > pdMS_TO_TICKS(1000) && !estado_btn){
             ESP_LOGI("Task INTR", "Interrupção recebida, inicianddo provisionamento...");
             tempoAnterior = tempoAtual;
-            xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
-            xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
+            EventBits_t bits = xEventGroupGetBits(eventos_status);
+            if (bits & PROVISIONING_STATUS) {
+                ESP_LOGW("PROVISIONAMENTO", "Erro: provisionamento já iniciado");
+            } else {
+                xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+                xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
+            }
+
         }
     }
 }
 
-bool checar_conexao(){
+bool gustavianWifiIsConnected(){
     EventBits_t bits = xEventGroupGetBits(eventos_status);
     if (bits & CONEXAO_STATUS){
         return true;
@@ -72,12 +78,17 @@ void gustavianWifiStart(){
     ESP_LOGI("MAIN", "NVS iniciado");
     configurar_wifi();
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    xEventGroupWaitBits(eventos_status, WIFI_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(10000));
     int ultima_rede = checar_ultima_rede();
     if (ultima_rede){
         ESP_LOGI("MAIN", "Última rede não encontrada, iniciando provisionamento...");
-        xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
-        xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
+        EventBits_t bits = xEventGroupGetBits(eventos_status);
+        if (bits & PROVISIONING_STATUS) {
+            ESP_LOGW("PROVISIONAMENTO", "Erro: provisionamento já iniciado");
+        } else {
+            xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+            ESP_ERROR_CHECK(xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL));
+        }
 
     } else {
         conectar_ultima_rede();

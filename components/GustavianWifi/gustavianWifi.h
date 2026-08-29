@@ -12,10 +12,10 @@
 #include "sdkconfig.h"
 #include "driver/gpio.h"
 
-static void IRAM_ATTR isr_botao(void *arg);
+
 void task_intr_wifi(void *parameters);
 void gustavianWifiStart();
-bool checar_conexao();
+bool gustavianWifiIsConnected();
 
 
 #endif

@@ -36,6 +36,33 @@ void configurar_wifi(){
     ESP_ERROR_CHECK(esp_wifi_start());
 
 }
+
+void task_callback_disconexao(void *params){
+    EventBits_t bits = xEventGroupGetBits(eventos_status);
+    if ((bits & PROVISIONING_STATUS) == 0){
+        ESP_LOGW(TAG, "Conexão falhou!");
+        contadorTentativas++;
+        if (contadorTentativas < CONFIG_NT_TENTATIVAS || !CONFIG_BOOL_RECX){
+            if (contadorTentativas > 1) ESP_LOGW(TAG, "Conexão falhou novamente...\n Tentativas: %d", contadorTentativas);
+            ESP_ERROR_CHECK(esp_wifi_connect());
+            vTaskDelay(pdMS_TO_TICKS(2000));
+
+        } else {
+            ESP_LOGW(TAG, "Tentativa de reconexão falhou, iniciando provisionamento...");
+            EventBits_t bits = xEventGroupGetBits(eventos_status);
+            if (bits & PROVISIONING_STATUS) {
+                ESP_LOGW("PROVISIONAMENTO", "Erro: provisionamento já iniciado");
+            } else {
+                xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
+                xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
+            }
+            
+        }
+    } else {
+        ESP_LOGI(TAG, "Provisionamento intencional");
+    }
+    vTaskDelete(NULL);
+}
 void task_provisionamentoWifiHTTP(void *parameters)
 {
     EventBits_t bits = xEventGroupGetBits(eventos_status);
@@ -51,7 +78,7 @@ void task_provisionamentoWifiHTTP(void *parameters)
                 .channel = 1,
                 .password = "123", //Deixa vazio para rede aberta
                 .max_connection = 4,
-                .authmode = WIFI_AUTH_OPEN
+                .authmode = WPA3_SAE_PK_MODE_AUTOMATIC
             },
         };
 
@@ -64,7 +91,7 @@ void task_provisionamentoWifiHTTP(void *parameters)
         //Liga o rádio Wi-fi
 
         if ((bits & WIFI_STATUS) == 0) ESP_ERROR_CHECK(esp_wifi_start());
-        vTaskDelay(pdMS_TO_TICKS(500));
+        xEventGroupWaitBits(eventos_status, WIFI_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(10000));
         ESP_LOGI("WIFI", "Rádio wifi ligado");
         //Agora que a rede está no ar (IP 192.168.4.1), podemos iniciar o servidor
         servidor = inicializar_servidor_web();
@@ -124,22 +151,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     //Evento 2: A conexão falhou (senha errada, roteador longe, etc)
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED){
         xEventGroupClearBits(eventos_status, WIFI_STATUS | CONEXAO_STATUS);
-        if ((bits & PROVISIONING_STATUS) == 0){
-            ESP_LOGW(TAG, "Conexão falhou!");
-            contadorTentativas++;
-            if (contadorTentativas < CONFIG_NT_TENTATIVAS || !CONFIG_BOOL_RECX){
-                if (contadorTentativas > 1) ESP_LOGW(TAG, "Conexão falhou novamente...\n Tentativas: %d", contadorTentativas);
-                ESP_ERROR_CHECK(esp_wifi_connect());
-                vTaskDelay(pdMS_TO_TICKS(2000));
+        xTaskCreate(task_callback_disconexao, "Handler de disconexão", 2048, NULL, 2, NULL);
 
-            } else {
-                ESP_LOGW(TAG, "Tentativa de reconexão falhou, iniciando provisionamento...");
-                xEventGroupSetBits(eventos_status, PROVISIONING_STATUS);
-                xTaskCreate(task_provisionamentoWifiHTTP, "task Provisionamento", 2048, NULL, 2, NULL);
-            }
-        } else {
-            ESP_LOGI(TAG, "Provisionamento intencional");
-        }
     }
     //Evento 3: conexão bem sucedida, endereço IP recebido
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP){
