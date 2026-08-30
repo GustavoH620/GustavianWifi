@@ -15,6 +15,8 @@ typedef struct {
     bool ultima_acessada;
 } credenciais_status_wifi;
 
+extern credenciais_status_wifi ultima_rede;
+
 void iniciar_nvs();
 int salvar_rede(char* ssid, char* senha);
 int checar_ultima_rede();

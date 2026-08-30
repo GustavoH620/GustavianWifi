@@ -10,8 +10,6 @@ volatile httpd_handle_t servidor;
 bool info_incorreta = false;
 
 
-
-extern bool conexao;
 //1. A página HML (String constante)
 const char* pagina_html =
     "<!DOCYPE html><html><body>"
@@ -23,13 +21,13 @@ const char* pagina_html =
     "</form></body></html>";
 
 
-//2. Rota GET: Envia a página para o navegador do utilizador
+//GET: Envia a página para o navegador do utilizador
 static esp_err_t rota_raiz_get(httpd_req_t *req) {
     httpd_resp_send(req, pagina_html, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
-//3. Rota POST: Recebe os dados quando o utilizador clica em "conectar"
+//POST: Recebe os dados quando o utilizador clica em "conectar"
 static esp_err_t rota_salvar_post(httpd_req_t *req){
     char buffer[100];
 
@@ -41,12 +39,6 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     buffer[ret] = '\0'; //Finaliza a string em C
 
     ESP_LOGI("HTTP", "Texto cru recebido do formulário: %s", buffer);
-    //Nota: O navegador enviará algo como "ssid=MeuWifi&senha=MinhaSenha"
-    //Teremos de separar (fazer o parse) desta string depois.
-
-    //Envia uma resposta visual para o utilizador não ficar com o ecrã a carregar
-    //httpd_resp_send(req, "recebido! o ESP32 vai tentar ligar-se...", HTTPD_RESP_USE_STRLEN);
-
 
     char ssid[64] = {0};
     char senha[32] = {0};
