@@ -11,8 +11,6 @@
 #include "sdkconfig.h"
 #include "driver/gpio.h"
 
-
-extern EventGroupHandle_t eventos_status;
 //FILA E INTERRUPÇÃO
 
 QueueHandle_t fila_botao_isr;
@@ -25,8 +23,6 @@ static void IRAM_ATTR isr_botao(void *arg){
 }
 
 // tasks e variáveis
-
-bool conexao = false;
 
 void task_intr_wifi(void *parameters){
     int estado_btn;
@@ -96,8 +92,8 @@ void gustavianWifiStart(){
     
 
     
-
-    if (checar_conexao()) {
+    xEventGroupWaitBits(eventos_status, CONEXAO_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(10000));
+    if (gustavianWifiIsConnected()) {
         ESP_LOGI("MAIN", "Rede conectada!, continuando rotina...");
     } else {
         ESP_LOGI("MAIN", "Rede não conectada...");

@@ -14,15 +14,12 @@
 #include "httpServer.h"
 #include "eventos.h"
 
-extern EventGroupHandle_t eventos_status;
 extern httpd_handle_t servidor;
 extern credenciais_status_wifi ultima_rede;
 
-
-volatile bool wifi_iniciado = false;
-volatile bool provisionamento = false;
 const char* TAG = "WIFI";
 int8_t contadorTentativas = 0;
+int tempo_retry = 2000;
 
 void configurar_wifi(){
     ESP_ERROR_CHECK(esp_netif_init());
@@ -45,7 +42,9 @@ void task_callback_disconexao(void *params){
         if (contadorTentativas < CONFIG_NT_TENTATIVAS || !CONFIG_BOOL_RECX){
             if (contadorTentativas > 1) ESP_LOGW(TAG, "Conexão falhou novamente...\n Tentativas: %d", contadorTentativas);
             ESP_ERROR_CHECK(esp_wifi_connect());
-            vTaskDelay(pdMS_TO_TICKS(2000));
+            vTaskDelay(pdMS_TO_TICKS(tempo_retry));
+            if (tempo_retry < 30000) tempo_retry = tempo_retry * 2;
+            if (tempo_retry > 30000) tempo_retry = 30000;
 
         } else {
             ESP_LOGW(TAG, "Tentativa de reconexão falhou, iniciando provisionamento...");
@@ -76,9 +75,9 @@ void task_provisionamentoWifiHTTP(void *parameters)
                 .ssid="Gustavian ESP",
                 .ssid_len = strlen("Gustavian ESP"),
                 .channel = 1,
-                .password = "123", //Deixa vazio para rede aberta
+                .password = "123#45gG", //Deixa vazio para rede aberta
                 .max_connection = 4,
-                .authmode = WPA3_SAE_PK_MODE_AUTOMATIC
+                .authmode = WIFI_AUTH_WPA3_PSK
             },
         };
 
@@ -107,9 +106,7 @@ int conectar_ultima_rede(){
     EventBits_t bits = xEventGroupGetBits(eventos_status);
     int check_ultima_rede = checar_ultima_rede();
     if (check_ultima_rede == 0){
-        while ((bits & WIFI_STATUS) == 0){
-            vTaskDelay(pdMS_TO_TICKS(50));
-        }
+        xEventGroupWaitBits(eventos_status, WIFI_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(15000));
         wifi_config_t wifi_config = {0};
         strlcpy((char*) wifi_config.sta.ssid, ultima_rede.ssid, sizeof(wifi_config.sta.ssid));
         strlcpy((char*) wifi_config.sta.password, ultima_rede.senha, sizeof(wifi_config.sta.password));

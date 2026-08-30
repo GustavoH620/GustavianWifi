@@ -7,8 +7,7 @@
 
 
 volatile httpd_handle_t servidor;
-extern EventGroupHandle_t eventos_status;
-extern bool provisionamento;
+bool info_incorreta = false;
 
 
 
@@ -22,6 +21,7 @@ const char* pagina_html =
     "Senha: <input type=\"password\" name=\"senha\"maxlenght=32\"><br><br>"
     "<input type=\"submit\" value=\"Conectar\">"
     "</form></body></html>";
+
 
 //2. Rota GET: Envia a página para o navegador do utilizador
 static esp_err_t rota_raiz_get(httpd_req_t *req) {
@@ -45,18 +45,18 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     //Teremos de separar (fazer o parse) desta string depois.
 
     //Envia uma resposta visual para o utilizador não ficar com o ecrã a carregar
-    httpd_resp_send(req, "recebido! o ESP32 vai tentar ligar-se...", HTTPD_RESP_USE_STRLEN);
+    //httpd_resp_send(req, "recebido! o ESP32 vai tentar ligar-se...", HTTPD_RESP_USE_STRLEN);
 
 
     char ssid[64] = {0};
     char senha[32] = {0};
     int leituras = 0;
     
-    leituras = sscanf(buffer, "ssid=%50[^&]&senha=%50[^\r\n]", ssid, senha);
+    leituras = sscanf(buffer, "ssid=%64[^&]&senha=%32[^\r\n]", ssid, senha);
 
     if (leituras == 2) {
-        ESP_LOGI("PARSER", "Nome extraido: %s \n", ssid);
-        ESP_LOGI("PARSER", "Senha extraída: %s \n", senha);
+        //ESP_LOGI("PARSER", "Nome extraido: %s \n", ssid);
+        //ESP_LOGI("PARSER", "Senha extraída: %s \n", senha);
 
     } else {
         ESP_LOGW("PARSER", "Erro ao extrair dados");
@@ -65,7 +65,7 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     
     
     ESP_LOGI("WIFI", "Tentando se conectar...");
-    provisionamento = false;
+    xEventGroupClearBits(eventos_status, CONEXAO_STATUS);
     conectar_rede(ssid, senha);
     xEventGroupWaitBits(eventos_status, CONEXAO_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(15000));
     EventBits_t bits = xEventGroupGetBits(eventos_status);
@@ -73,7 +73,18 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
         httpd_resp_send(req, "Conectado a rede!",HTTPD_RESP_USE_STRLEN);
         salvar_rede(ssid, senha);
     } else {
-        httpd_resp_send(req, "Informações incorretas", HTTPD_RESP_USE_STRLEN);
+        pagina_html =
+        "<!DOCYPE html><html><body>"
+        "<h2>Configurar Wi-Fi</h2>"
+        "<h3 style='color: red;'>Rede ou Senha Incorretas!</h3>"
+        "<form action=\"/salvar\" method=\"POST\">"
+        "SSID: <input type=\"text\" name=\"ssid\"maxlenght=64\"><br><br>"
+        "Senha: <input type=\"password\" name=\"senha\"maxlenght=32\"><br><br>"
+        "<input type=\"submit\" value=\"Conectar\">"
+        "</form></body></html>";
+        
+        httpd_resp_send(req, pagina_html, HTTPD_RESP_USE_STRLEN);
+        
     }
 
     return ESP_OK;
