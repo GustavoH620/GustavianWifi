@@ -1,5 +1,7 @@
 ## Gustavian Wi-fi
 
+<img width="532" height="413" alt="sc" src="https://github.com/user-attachments/assets/5685560f-713f-4c60-8db0-226b03fd7176" />
+
 Esse é meu gerenciador de conexão Wi-Fi que realiza a conexão e reconexão do ESP32 com redes Wi-Fi, algumas das funções são:
 
 #### Fácil inicialização:
