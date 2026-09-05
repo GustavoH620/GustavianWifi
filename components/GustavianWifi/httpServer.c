@@ -10,7 +10,6 @@ volatile httpd_handle_t servidor;
 bool info_incorreta = false;
 
 
-//1. A página HML (String constante)
 const char* pagina_html =
     "<!DOCYPE html><html><body>"
     "<h2>Configurar Wi-Fi</h2>"
@@ -19,26 +18,37 @@ const char* pagina_html =
     "Senha: <input type=\"password\" name=\"senha\"maxlenght=32\"><br><br>"
     "<input type=\"submit\" value=\"Conectar\">"
     "</form></body></html>";
+const char* pagina_html_erro =
+        "<!DOCYPE html><html><body>"
+        "<h2>Configurar Wi-Fi</h2>"
+        "<h3 style='color: red;'>Rede ou Senha Incorretas!</h3>"
+        "<form action=\"/salvar\" method=\"POST\">"
+        "SSID: <input type=\"text\" name=\"ssid\"maxlenght=64\"><br><br>"
+        "Senha: <input type=\"password\" name=\"senha\"maxlenght=32\"><br><br>"
+        "<input type=\"submit\" value=\"Conectar\">"
+        "</form></body></html>";
 
 
-//GET: Envia a página para o navegador do utilizador
+
+
+//GET
 static esp_err_t rota_raiz_get(httpd_req_t *req) {
     httpd_resp_send(req, pagina_html, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
-//POST: Recebe os dados quando o utilizador clica em "conectar"
+//POST
 static esp_err_t rota_salvar_post(httpd_req_t *req){
-    char buffer[100];
+    char buffer[250];
 
-    //Lê o corpo da requisição HTTP
+    
     int ret = httpd_req_recv(req, buffer, sizeof(buffer) - 1);
     if (ret <= 0){
         return ESP_FAIL;
     }
-    buffer[ret] = '\0'; //Finaliza a string em C
+    buffer[ret] = '\0'; 
 
-    ESP_LOGI("HTTP", "Texto cru recebido do formulário: %s", buffer);
+    ESP_LOGI("HTTP", "Texto recebido do formulário: %s", buffer);
 
     char ssid[64] = {0};
     char senha[32] = {0};
@@ -52,7 +62,9 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
 
     } else {
         ESP_LOGW("PARSER", "Erro ao extrair dados");
+        httpd_resp_send(req, pagina_html_erro, HTTPD_RESP_USE_STRLEN);
         return ESP_FAIL;
+        
     }
     
     
@@ -62,20 +74,12 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
     xEventGroupWaitBits(eventos_status, CONEXAO_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(15000));
     EventBits_t bits = xEventGroupGetBits(eventos_status);
     if (bits & CONEXAO_STATUS){
-        httpd_resp_send(req, "Conectado a rede!",HTTPD_RESP_USE_STRLEN);
+        httpd_resp_send(req, "<h2>Conectado a rede!</h2>",HTTPD_RESP_USE_STRLEN);
         salvar_rede(ssid, senha);
     } else {
-        pagina_html =
-        "<!DOCYPE html><html><body>"
-        "<h2>Configurar Wi-Fi</h2>"
-        "<h3 style='color: red;'>Rede ou Senha Incorretas!</h3>"
-        "<form action=\"/salvar\" method=\"POST\">"
-        "SSID: <input type=\"text\" name=\"ssid\"maxlenght=64\"><br><br>"
-        "Senha: <input type=\"password\" name=\"senha\"maxlenght=32\"><br><br>"
-        "<input type=\"submit\" value=\"Conectar\">"
-        "</form></body></html>";
         
-        httpd_resp_send(req, pagina_html, HTTPD_RESP_USE_STRLEN);
+        
+        httpd_resp_send(req, pagina_html_erro, HTTPD_RESP_USE_STRLEN);
         
     }
 
