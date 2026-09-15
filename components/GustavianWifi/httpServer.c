@@ -6,8 +6,9 @@
 #include "eventos.h"
 
 
-volatile httpd_handle_t servidor;
-bool info_incorreta = false;
+
+httpd_handle_t servidor;
+//bool info_incorreta = false;
 
 
 const char* pagina_html =
@@ -120,5 +121,9 @@ httpd_handle_t inicializar_servidor_web(void){
     }
     
     return servidor;
+}
+
+void parar_servidor_web(){
+    httpd_stop(servidor);
 }
 

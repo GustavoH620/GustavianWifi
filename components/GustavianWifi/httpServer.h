@@ -9,7 +9,8 @@
 
 httpd_handle_t inicializar_servidor_web(void);
 
-extern httpd_handle_t servidor;
+void parar_servidor_web()
+
 
 
 #endif

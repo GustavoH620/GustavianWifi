@@ -19,7 +19,7 @@
 const char* TAG = "WIFI";
 int8_t contadorTentativas = 0;
 int tempo_retry = 2000;
-wifi_event_sta_disconnected_t *event_disconnected;
+
 
 void configurar_wifi(){
     ESP_ERROR_CHECK(esp_netif_init());
@@ -147,6 +147,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     }
     //Evento 2: A conexão falhou (senha errada, roteador longe, etc)
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED){
+        wifi_event_sta_disconnected_t *event_disconnected;
         xEventGroupClearBits(eventos_status, WIFI_STATUS | CONEXAO_STATUS);
         event_disconnected = (wifi_event_sta_disconnected_t*) event_data;
         ESP_LOGW(TAG, "Desconexão por: %d", event_disconnected->reason);
@@ -159,7 +160,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         ESP_LOGI(TAG, "Conexão realizada com sucesso! IP: " IPSTR, IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(eventos_status, CONEXAO_STATUS);
         contadorTentativas = 0;
-        httpd_stop(servidor);
+        parar_servidor_web();
         esp_wifi_set_mode(WIFI_MODE_STA);
         xEventGroupClearBits(eventos_status, PROVISIONING_STATUS);
 
