@@ -4,9 +4,7 @@
 
 
 const char* particao_wifi = "part_wifi";
-char buffer[100];
-size_t tamanho_buffer = sizeof(buffer);
-nvs_handle_t handle_nvs;
+
 credenciais_status_wifi ultima_rede;
 
 
@@ -17,6 +15,7 @@ void iniciar_nvs(){
 }
 
 int checar_ultima_rede(){
+    nvs_handle_t handle_nvs;
     ESP_ERROR_CHECK(nvs_open(particao_wifi, NVS_READWRITE, &handle_nvs));
     nvs_iterator_t iterador = NULL;
     esp_err_t erro = nvs_entry_find("nvs", particao_wifi, NVS_TYPE_BLOB, &iterador);
@@ -62,6 +61,7 @@ int checar_ultima_rede(){
 
 }
 int salvar_rede(char* ssid, char* senha){
+    nvs_handle_t handle_nvs;
     ESP_ERROR_CHECK(nvs_open(particao_wifi, NVS_READWRITE, &handle_nvs));
     credenciais_status_wifi credenciais_novas;
     strcpy(credenciais_novas.ssid, ssid);
