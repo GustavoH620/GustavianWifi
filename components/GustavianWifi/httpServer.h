@@ -9,7 +9,7 @@
 
 httpd_handle_t inicializar_servidor_web(void);
 
-void parar_servidor_web()
+void parar_servidor_web(void);
 
 
 

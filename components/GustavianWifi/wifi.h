@@ -12,8 +12,6 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 
-static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
-
 void task_provisionamentoWifiHTTP(void *parameters);
 
 int conectar_ultima_rede();

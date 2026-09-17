@@ -7,7 +7,7 @@
 
 
 
-httpd_handle_t servidor;
+static httpd_handle_t servidor;
 //bool info_incorreta = false;
 
 
@@ -92,7 +92,7 @@ static esp_err_t rota_salvar_post(httpd_req_t *req){
 //4. Função para ligar o serviddor e registrar as portas
 httpd_handle_t inicializar_servidor_web(void){
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    httpd_handle_t servidor = NULL;
+    servidor = NULL;
 
     if (httpd_start(&servidor, &config) == ESP_OK) {
         //Registra a rota da página inicial

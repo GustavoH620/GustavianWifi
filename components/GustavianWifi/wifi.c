@@ -20,6 +20,7 @@ const char* TAG = "WIFI";
 int8_t contadorTentativas = 0;
 int tempo_retry = 2000;
 
+static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
 void configurar_wifi(){
     ESP_ERROR_CHECK(esp_netif_init());
@@ -93,7 +94,7 @@ void task_provisionamentoWifiHTTP(void *parameters)
         xEventGroupWaitBits(eventos_status, WIFI_STATUS, pdFALSE, pdTRUE, pdMS_TO_TICKS(10000));
         ESP_LOGI("WIFI", "Rádio wifi ligado");
         //Agora que a rede está no ar (IP 192.168.4.1), podemos iniciar o servidor
-        servidor = inicializar_servidor_web();
+        inicializar_servidor_web();
         
     } else {
         ESP_LOGI("WIFI", "Provisionamento já iniciado");
